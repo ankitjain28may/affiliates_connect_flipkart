@@ -1,0 +1,11 @@
+native_api: false
+flipkart_tracking_id:
+flipkart_token:
+data_storage: false
+import:
+full_content: false
+price: false
+available: false
+size: false
+color: false
+offers: false
