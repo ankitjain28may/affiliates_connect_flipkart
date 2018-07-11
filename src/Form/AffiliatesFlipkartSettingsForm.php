@@ -109,7 +109,7 @@ class AffiliatesFlipkartSettingsForm extends AffiliatesConnectSettingsForm {
 
     $form['flipkart_settings']['native_api_form']['data_storage_form'] = [
       '#type' => 'details',
-      '#title' => $this->t('Plugin Storage'),
+      '#title' => $this->t('Plugin Update'),
       '#open' => TRUE,
       '#states' => [
         "visible" => [
@@ -217,7 +217,7 @@ class AffiliatesFlipkartSettingsForm extends AffiliatesConnectSettingsForm {
       $category = [
         'category' => $values['categories']
       ];
-      $form_state->setRedirect('affiliates_connect_flipkart.batch_fetching', $category);
+      $form_state->setRedirect('affiliates_connect_flipkart.batch_import', $category);
     }
   }
 

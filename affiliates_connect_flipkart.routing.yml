@@ -8,7 +8,7 @@ affiliates_connect_flipkart.settings:
   options:
     _admin_route: TRUE
 
-affiliates_connect_flipkart.batch_fetching:
+affiliates_connect_flipkart.batch_import:
   path: 'admin/config/affiliates-connect-flipkart/batch-processing'
   defaults:
     _title: 'Affiliates Connect Flipkart'

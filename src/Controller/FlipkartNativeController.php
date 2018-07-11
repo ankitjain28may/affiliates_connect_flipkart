@@ -1,5 +1,6 @@
 <?php
 
+
 namespace Drupal\affiliates_connect_flipkart\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
@@ -53,6 +54,11 @@ class FlipkartNativeController extends ControllerBase {
     // If enabled native_apis
     if (!$this->config('affiliates_connect_flipkart.settings')->get('native_api')) {
       drupal_set_message($this->t('Configure flipkart native api to import data'), 'error', FALSE);
+      return $this->redirect('affiliates_connect_flipkart.settings');
+    }
+
+    if (!$this->config('affiliates_connect_flipkart.settings')->get('data_storage')) {
+      drupal_set_message($this->t('Enable Data Storage for storing data'), 'error', FALSE);
       return $this->redirect('affiliates_connect_flipkart.settings');
     }
     $params = $request->query->all();
@@ -171,7 +177,8 @@ class FlipkartNativeController extends ControllerBase {
 
     foreach ($products_data['products'] as $key => $value) {
       try {
-        Self::createOrUpdate($value, $config);
+        $product = Self::buildImportData($value);
+        AffiliatesProduct::createOrUpdate($product, $config);
       }
       catch (Exception $e) {
         echo $e->getMessage();
@@ -180,87 +187,37 @@ class FlipkartNativeController extends ControllerBase {
   }
 
   /**
-   * Create if not found else update the existing.
+   * To create a product array with appropriate key-value pair.
    *
-   * @param array $value
-   *  product data
-   * @param ImmutableConfig $config
-   *  configuration of the plugin
+   * @param array $product_data
+   *
+   * @return array
+   *
    */
-  public function createOrUpdate(array $value, ImmutableConfig $config)
-  {
-    $product_id = $value['productBaseInfoV1']['productId'];
-    $nodes = \Drupal::entityTypeManager()
-      ->getStorage('affiliates_product')
-      ->loadByProperties(['product_id' => $product_id]);
-    $product = reset($nodes);
-
-    if (!$product) {
-      $product = AffiliatesProduct::create([
-        'uid' => \Drupal::currentUser()->id(),
-        'name' => $value['productBaseInfoV1']['title'],
-        'plugin_id' => 'affiliates_connect_flipkart',
-        'product_id' => $value['productBaseInfoV1']['productId'],
-        'product_description' => $value['productBaseInfoV1']['productDescription'],
-        'image_urls' => $value['productBaseInfoV1']['imageUrls']['400x400'],
-        'product_family' => $value['productBaseInfoV1']['categoryPath'],
-        'currency' => $value['productBaseInfoV1']['maximumRetailPrice']['currency'],
-        'maximum_retail_price' => $value['productBaseInfoV1']['maximumRetailPrice']['amount'],
-        'vendor_selling_price' => $value['productBaseInfoV1']['flipkartSellingPrice']['amount'],
-        'vendor_special_price' => $value['productBaseInfoV1']['flipkartSpecialPrice']['amount'],
-        'product_url' => $value['productBaseInfoV1']['productUrl'],
-        'product_brand' => $value['productBaseInfoV1']['productBrand'],
-        'in_stock' => $value['productBaseInfoV1']['inStock'],
-        'cod_available' => $value['productBaseInfoV1']['codAvailable'],
-        'discount_percentage' => $value['productBaseInfoV1']['discountPercentage'],
-        'offers' => implode(',', $value['productBaseInfoV1']['offers']),
-        'size' => $value['productBaseInfoV1']['attributes']['size'],
-        'color' => $value['productBaseInfoV1']['attributes']['color'],
-        'seller_name' => $value['productShippingInfoV1']['sellerName'],
-        'seller_average_rating' => $value['productShippingInfoV1']['sellerAverageRating'],
-        'additional_data' => '',
-        'status' => 1,
-      ]);
-      $product->save();
-      return;
-    }
-    if ($config->get('full_content')) {
-      $product->setName($value['productBaseInfoV1']['title']);
-      $product->setProductDescription($value['productBaseInfoV1']['productDescription']);
-      $product->setImageUrls($value['productBaseInfoV1']['imageUrls']['400x400']);
-      $product->setCurrency($value['productBaseInfoV1']['maximumRetailPrice']['currency']);
-      $product->setMaximumRetailPrice($value['productBaseInfoV1']['maximumRetailPrice']['amount']);
-      $product->setVendorSellingPrice($value['productBaseInfoV1']['flipkartSellingPrice']['amount']);
-      $product->setVendorSpecialPrice($value['productBaseInfoV1']['flipkartSpecialPrice']['amount']);
-      $product->setProductUrl($value['productBaseInfoV1']['productUrl']);
-      $product->setProductAvailability($value['productBaseInfoV1']['inStock']);
-      $product->setProductCodAvailability($value['productBaseInfoV1']['codAvailable']);
-      $product->setDiscount($value['productBaseInfoV1']['discountPercentage']);
-      $product->setOffers(implode(',', $value['productBaseInfoV1']['offers']));
-      $product->setSize($value['productBaseInfoV1']['attributes']['size']);
-      $product->setColor($value['productBaseInfoV1']['attributes']['color']);
-      $product->setSellerName($value['productShippingInfoV1']['sellerName']);
-      $product->setSellerAverageRating($value['productShippingInfoV1']['sellerAverageRating']);
-    }
-    if ($config->get('price')) {
-      $product->setCurrency($value['productBaseInfoV1']['maximumRetailPrice']['currency']);
-      $product->setMaximumRetailPrice($value['productBaseInfoV1']['maximumRetailPrice']['amount']);
-      $product->setVendorSellingPrice($value['productBaseInfoV1']['flipkartSellingPrice']['amount']);
-      $product->setVendorSpecialPrice($value['productBaseInfoV1']['flipkartSpecialPrice']['amount']);
-      $product->setDiscount($value['productBaseInfoV1']['discountPercentage']);
-    }
-    if ($config->get('available')) {
-      $product->setProductAvailability($value['productBaseInfoV1']['inStock']);
-    }
-    if ($config->get('size')) {
-      $product->setSize($value['productBaseInfoV1']['attributes']['size']);
-    }
-    if ($config->get('color')) {
-      $product->setColor($value['productBaseInfoV1']['attributes']['color']);
-    }
-    if ($config->get('offers')) {
-      $product->setOffers(implode(',', $value['productBaseInfoV1']['offers']));
-    }
-    $product->save();
+  public function buildImportData($product_data) {
+    $product = [
+      'name' => $product_data['productBaseInfoV1']['title'],
+      'plugin_id' => 'affiliates_connect_flipkart',
+      'product_id' => $product_data['productBaseInfoV1']['productId'],
+      'product_description' => $product_data['productBaseInfoV1']['productDescription'],
+      'image_urls' => $product_data['productBaseInfoV1']['imageUrls']['400x400'],
+      'product_family' => $product_data['productBaseInfoV1']['categoryPath'],
+      'currency' => $product_data['productBaseInfoV1']['maximumRetailPrice']['currency'],
+      'maximum_retail_price' => $product_data['productBaseInfoV1']['maximumRetailPrice']['amount'],
+      'vendor_selling_price' => $product_data['productBaseInfoV1']['flipkartSellingPrice']['amount'],
+      'vendor_special_price' => $product_data['productBaseInfoV1']['flipkartSpecialPrice']['amount'],
+      'product_url' => $product_data['productBaseInfoV1']['productUrl'],
+      'product_brand' => $product_data['productBaseInfoV1']['productBrand'],
+      'in_stock' => $product_data['productBaseInfoV1']['inStock'],
+      'cod_available' => $product_data['productBaseInfoV1']['codAvailable'],
+      'discount_percentage' => $product_data['productBaseInfoV1']['discountPercentage'],
+      'offers' => implode(',', $product_data['productBaseInfoV1']['offers']),
+      'size' => $product_data['productBaseInfoV1']['attributes']['size'],
+      'color' => $product_data['productBaseInfoV1']['attributes']['color'],
+      'seller_name' => $product_data['productShippingInfoV1']['sellerName'],
+      'seller_average_rating' => $product_data['productShippingInfoV1']['sellerAverageRating'],
+      'additional_data' => '',
+    ];
+    return $product;
   }
 }

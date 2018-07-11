@@ -7,7 +7,7 @@ namespace Drupal\affiliates_connect_flipkart;
  */
 class FlipkartCategories {
 
-  public static function getCategories() {
+  public function getCategories() {
     $categories = [
       'desktops' => 'Desktops',
       'fragrances' => 'Fragrances',
