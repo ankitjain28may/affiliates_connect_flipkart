@@ -117,11 +117,11 @@ class ConfigFormTest extends BrowserTestBase {
     );
     // Get all checkboxes
     $checkboxes = $this->xpath('//input[@type="checkbox"]');
-    $this->assertIdentical(count($checkboxes), 13, 'Correct number of checkboxes found.');
+    $this->assertIdentical(count($checkboxes), 16, 'Correct number of checkboxes found.');
     foreach ($checkboxes as $checkbox) {
       $checked = $checkbox->isChecked();
       $name = (string) $checkbox->getAttribute('name');
-      $this->assertIdentical($checked, $name == 'native_api' || $name == 'data_storage' || $name == 'full_content' || $name == 'price' || $name == 'available' || $name == 'size' || $name == 'color' || $name == 'offers' || $name == 'fallback_scraper' || $name == 'save_searched_products' || $name == 'cloaking' || $name == 'enable_hits_analysis' || $name == 'append_affiliate_id', format_string('Checkbox %name correctly checked', ['%name' => $name]));
+      $this->assertIdentical($checked, $name == 'native_api' || $name == 'search' || $name == 'data_storage' || $name == 'full_content' || $name == 'price' || $name == 'available' || $name == 'size' || $name == 'color' || $name == 'offers' || $name == 'fallback_scraper' || $name == 'save_searched_products' || $name == 'cloaking' || $name == 'enable_hits_analysis' || $name == 'append_affiliate_id' || $name == 'no_follow' || $name == 'robots', format_string('Checkbox %name correctly checked', ['%name' => $name]));
     }
   }
 }
