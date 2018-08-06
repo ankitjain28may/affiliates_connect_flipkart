@@ -1,0 +1,9 @@
+affiliates_connect_flipkart.settings:
+  route_name: affiliates_connect_flipkart.settings
+  title: 'Affiliates Connect Flipkart Settings'
+  base_route: affiliates_connect_flipkart.settings
+
+affiliates_connect_flipkart.search:
+  route_name: affiliates_connect_flipkart.search
+  title: 'Search'
+  base_route: affiliates_connect_flipkart.settings

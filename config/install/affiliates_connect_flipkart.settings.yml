@@ -1,6 +1,7 @@
 native_api: false
 flipkart_tracking_id: flipkart_tracking_id
 flipkart_token: flipkart_token
+search: false
 data_storage: false
 import:
 full_content: false

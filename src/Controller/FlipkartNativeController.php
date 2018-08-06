@@ -1,15 +1,11 @@
 <?php
 
-
 namespace Drupal\affiliates_connect_flipkart\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\affiliates_connect\Entity\AffiliatesProduct;
 use Drupal\affiliates_connect\AffiliatesNetworkManager;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
-use Drupal\Core\Config\ImmutableConfig;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -41,6 +37,12 @@ class FlipkartNativeController extends ControllerBase {
    */
   public function __construct(AffiliatesNetworkManager $affiliatesNetworkManager) {
     $this->affiliatesNetworkManager = $affiliatesNetworkManager;
+    $this->affiliatesNetworkManager = $affiliatesNetworkManager;
+    $this->flipkart = $this->affiliatesNetworkManager->createInstance('affiliates_connect_flipkart');
+    $this->flipkart->setCredentials(
+      $this->config('affiliates_connect_flipkart.settings')->get('flipkart_tracking_id'),
+      $this->config('affiliates_connect_flipkart.settings')->get('flipkart_token')
+    );
   }
 
   /**
@@ -65,7 +67,7 @@ class FlipkartNativeController extends ControllerBase {
     $category = $params['category'];
     $batch = [];
     // Fetch all the categories
-    $categories = $this->categories();
+    $categories = $this->flipkart->getCategoriesUrl()->execute()->getResults();
     $operations = [];
     $title = '';
     if ($category) {
@@ -97,7 +99,7 @@ class FlipkartNativeController extends ControllerBase {
    * @param $context
    */
   public static function startBatchImporting($key, $value, &$context) {
-    $categories = Self::products($value);
+    $categories = Self::importingProducts($value);
     $context['results']['processed']++;
     $context['message'] = 'Completed importing category : ' . $key;
   }
@@ -120,104 +122,30 @@ class FlipkartNativeController extends ControllerBase {
   }
 
   /**
-   * Fetching categories from the Category API.
+   * To fetch first page.
    *
-   * @return array
-   *   A collection of categories along with category url
-   */
-  public function categories()
-  {
-    $flipkart = $this->affiliatesNetworkManager->createInstance('affiliates_connect_flipkart');
-    $config = $this->config('affiliates_connect_flipkart.settings');
-
-    $fk_affiliate_id = $config->get('flipkart_tracking_id');
-    $token = $config->get('flipkart_token');
-
-    $header = [
-      'Fk-Affiliate-Id' => $fk_affiliate_id,
-      'Fk-Affiliate-Token' => $token,
-      'Accept' => 'application/json',
-    ];
-
-    $url = 'https://affiliate-api.flipkart.net/affiliate/api/' . $fk_affiliate_id . '.json';
-    // $client = new Client();
-    $response = $flipkart->get($url, ['headers' => $header]);
-    $body = $response->getBody();
-    $body = json_decode($body, true);
-
-    $categories = [];
-    foreach ($body['apiGroups']['affiliate']['apiListings'] as $key => $value) {
-      $categories[$key] = $value['availableVariants']['v1.1.0']['get'];
-    }
-    return $categories;
-  }
-
-  /**
-   * Collect products data from Product APIs.
+   * @param string $keyword
+   * @param string $category
+   * @param int $i
    *
-   * @param string $product_url
-   *   An url where request is to be made
    */
-  public function products($product_url)
+  public static function importingProducts($product_url)
   {
     $flipkart = \Drupal::service('plugin.manager.affiliates_network')->createInstance('affiliates_connect_flipkart');
-
     $config = \Drupal::configFactory()->get('affiliates_connect_flipkart.settings');
-    $fk_affiliate_id = $config->get('flipkart_tracking_id');
+    $tracking_id = $config->get('flipkart_tracking_id');
     $token = $config->get('flipkart_token');
 
-    $header = [
-      'Fk-Affiliate-Id' => $fk_affiliate_id,
-      'Fk-Affiliate-Token' => $token,
-      'Accept' => 'application/json',
-    ];
-    $response = $flipkart->get($product_url, ['headers' => $header]);
-    $products_data = $response->getBody();
-    $products_data = json_decode($products_data, true);
+    $flipkart->setCredentials($tracking_id, $token);
+    $results = $flipkart->getProducts($product_url)->execute()->getResults();
 
-    foreach ($products_data['products'] as $key => $value) {
+    foreach ($results as $key => $value) {
       try {
-        $product = Self::buildImportData($value);
-        AffiliatesProduct::createOrUpdate($product, $config);
+        AffiliatesProduct::createOrUpdate($value, $config);
       }
       catch (Exception $e) {
         echo $e->getMessage();
       }
     }
-  }
-
-  /**
-   * To create a product array with appropriate key-value pair.
-   *
-   * @param array $product_data
-   *
-   * @return array
-   *
-   */
-  public function buildImportData($product_data) {
-    $product = [
-      'name' => $product_data['productBaseInfoV1']['title'],
-      'plugin_id' => 'affiliates_connect_flipkart',
-      'product_id' => $product_data['productBaseInfoV1']['productId'],
-      'product_description' => $product_data['productBaseInfoV1']['productDescription'],
-      'image_urls' => $product_data['productBaseInfoV1']['imageUrls']['400x400'],
-      'product_family' => $product_data['productBaseInfoV1']['categoryPath'],
-      'currency' => $product_data['productBaseInfoV1']['maximumRetailPrice']['currency'],
-      'maximum_retail_price' => $product_data['productBaseInfoV1']['maximumRetailPrice']['amount'],
-      'vendor_selling_price' => $product_data['productBaseInfoV1']['flipkartSellingPrice']['amount'],
-      'vendor_special_price' => $product_data['productBaseInfoV1']['flipkartSpecialPrice']['amount'],
-      'product_url' => $product_data['productBaseInfoV1']['productUrl'],
-      'product_brand' => $product_data['productBaseInfoV1']['productBrand'],
-      'in_stock' => $product_data['productBaseInfoV1']['inStock'],
-      'cod_available' => $product_data['productBaseInfoV1']['codAvailable'],
-      'discount_percentage' => $product_data['productBaseInfoV1']['discountPercentage'],
-      'offers' => implode(',', $product_data['productBaseInfoV1']['offers']),
-      'size' => $product_data['productBaseInfoV1']['attributes']['size'],
-      'color' => $product_data['productBaseInfoV1']['attributes']['color'],
-      'seller_name' => $product_data['productShippingInfoV1']['sellerName'],
-      'seller_average_rating' => $product_data['productShippingInfoV1']['sellerAverageRating'],
-      'additional_data' => '',
-    ];
-    return $product;
   }
 }

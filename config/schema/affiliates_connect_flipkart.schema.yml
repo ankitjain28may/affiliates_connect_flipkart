@@ -11,6 +11,9 @@ affiliates_connect_flipkart.settings:
     flipkart_token:
       type: string
       label: 'Input token of corresponding Affiliate API'
+    search:
+      type: boolean
+      label: 'Allows searching of products'
     data_storage:
       type: boolean
       label: 'Allows storing product data in your site database'

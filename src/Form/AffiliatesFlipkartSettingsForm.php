@@ -100,6 +100,13 @@ class AffiliatesFlipkartSettingsForm extends AffiliatesConnectSettingsForm {
       ],
     ];
 
+    $form['flipkart_settings']['native_api_form']['search'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Search'),
+      '#description' => $this->t('Enable to search product.'),
+      '#default_value' => $config->get('search'),
+    ];
+
     $form['flipkart_settings']['native_api_form']['data_storage'] = [
       '#type' => 'checkbox',
       '#title' => $this->t('Data Storage'),
@@ -198,6 +205,7 @@ class AffiliatesFlipkartSettingsForm extends AffiliatesConnectSettingsForm {
       ->set('native_api', $values['native_api'])
       ->set('flipkart_tracking_id', $values['flipkart_tracking_id'])
       ->set('flipkart_token', $values['flipkart_token'])
+      ->set('search', $values['search'])
       ->set('data_storage', $values['data_storage'])
       ->set('import', $values['import'])
       ->set('full_content', $values['full_content'])
